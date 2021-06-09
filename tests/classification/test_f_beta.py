@@ -75,7 +75,7 @@ def _sk_fbeta_f1_multidim_multiclass(
         target = torch.transpose(target, 1, 2).reshape(-1, target.shape[1])
 
         return _sk_fbeta_f1(preds, target, sk_fn, num_classes, average, False, ignore_index)
-    elif mdmc_average == "samplewise":
+    if mdmc_average == "samplewise":
         scores = []
 
         for i in range(preds.shape[0]):
@@ -291,6 +291,44 @@ class TestFBeta(MetricTester):
                 ignore_index=ignore_index,
                 mdmc_average=mdmc_average,
             ),
+            metric_args={
+                "num_classes": num_classes,
+                "average": average,
+                "threshold": THRESHOLD,
+                "multiclass": multiclass,
+                "ignore_index": ignore_index,
+                "mdmc_average": mdmc_average,
+            },
+        )
+
+    def test_fbeta_f1_differentiability(
+        self,
+        preds: Tensor,
+        target: Tensor,
+        sk_wrapper: Callable,
+        metric_class: Metric,
+        metric_fn: Callable,
+        sk_fn: Callable,
+        multiclass: Optional[bool],
+        num_classes: Optional[int],
+        average: str,
+        mdmc_average: Optional[str],
+        ignore_index: Optional[int],
+    ):
+        if num_classes == 1 and average != "micro":
+            pytest.skip("Only test binary data for 'micro' avg (equivalent of 'binary' in sklearn)")
+
+        if ignore_index is not None and preds.ndim == 2:
+            pytest.skip("Skipping ignore_index test with binary inputs.")
+
+        if average == "weighted" and ignore_index is not None and mdmc_average is not None:
+            pytest.skip("Ignore special case where we are ignoring entire sample for 'weighted' average")
+
+        self.run_differentiability_test(
+            preds,
+            target,
+            metric_functional=metric_fn,
+            metric_module=metric_class,
             metric_args={
                 "num_classes": num_classes,
                 "average": average,
