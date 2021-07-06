@@ -13,3 +13,4 @@ sphinx-copybutton>=0.3
 
 # integrations
 pytorch-lightning>=1.1
+pillow>=8.3.0 # not directly required, pinned by Snyk to avoid a vulnerability
